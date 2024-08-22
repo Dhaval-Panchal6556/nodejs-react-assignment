@@ -73,7 +73,6 @@ export class DeveloperService {
         })
       );
     } catch (error) {
-      console.log("error: ", error);
       throw CustomError.UnknownError(error?.message, error?.status);
     }
   }
@@ -83,7 +82,6 @@ export class DeveloperService {
       const findDeveloper = await this.developerModel.findOne({
         email: body.email.toLowerCase(),
       });
-      console.log("findDeveloper: ", findDeveloper);
 
       if (!findDeveloper) {
         throw TypeExceptions.AlreadyExistsCommonFunction(
@@ -110,7 +108,7 @@ export class DeveloperService {
         successResponse(statusOk, DEVELOPER_MSG.DEVELOPER_LOGIN_SUCC, {
           authToken: jwtToken,
           developerId: findDeveloper._id,
-          name :  findDeveloper.name
+          name: findDeveloper.name,
         })
       );
     } catch (error) {

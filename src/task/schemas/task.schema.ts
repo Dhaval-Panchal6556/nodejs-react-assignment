@@ -29,6 +29,9 @@ export class Tasks {
   inProgressDate: Date;
 
   @Prop()
+  completedDate: Date;
+
+  @Prop()
   expiredDate: Date;
 }
 

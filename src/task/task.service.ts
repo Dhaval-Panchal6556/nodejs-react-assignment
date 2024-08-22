@@ -46,7 +46,6 @@ export class TaskService {
       const page = body.page ? Number(body.page) : 1;
       const skip = (page - 1) * limit;
 
-      console.log("req.user._id: ", req.user._id);
       const aggregateQuery = [];
 
       aggregateQuery.push({
@@ -138,6 +137,8 @@ export class TaskService {
                   assignedName: "$assignedDetails.name",
                   assignedId: "$assignedDetails._id",
                   createdDate: "$createdDate",
+                  inProgressDate: "$inProgressDate",
+                  completedDate: "$completedDate",
                 },
                 null,
               ],
@@ -157,13 +158,12 @@ export class TaskService {
                   assignedName: "$assignedDetails.name",
                   assignedId: "$assignedDetails._id",
                   createdDate: "$createdDate",
-                  expiredDate:"$expiredDate"
+                  expiredDate: "$expiredDate",
                 },
                 null,
               ],
             },
           },
-          
         },
       });
 
@@ -244,25 +244,21 @@ export class TaskService {
         throw TypeExceptions.NotFoundCommonFunction("Task is not found");
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateFields: any = { status: body.status };
+
+      if (body.status === "inProgress") {
+        updateFields.inProgressDate = new Date().toISOString();
+      } else if (body.status === "expired") {
+        updateFields.expiredDate = new Date().toISOString();
+      } else if (body.status === "completed") {
+        updateFields.completedDate = new Date().toISOString();
+      }
+
       await this.taskModel.findOneAndUpdate(
         { _id: new mongoose.Types.ObjectId(body._id) },
-        {
-          status: body.status,
-          inProgressDate: new Date().toISOString(),
-        }
+        updateFields
       );
-
-      if(body.status == "expired"){
-        await this.taskModel.findOneAndUpdate(
-          { _id: new mongoose.Types.ObjectId(body._id) },
-          {
-            status: body.status,
-            expiredDate: new Date().toISOString(),
-          }
-        );
-      }
-      
-      
 
       return res
         .status(statusOk)
@@ -328,7 +324,6 @@ export class TaskService {
       const page = body.page ? Number(body.page) : 1;
       const skip = (page - 1) * limit;
 
-      console.log("req.user._id: ", req.user._id);
       const aggregateQuery = [];
 
       aggregateQuery.push({
@@ -350,10 +345,10 @@ export class TaskService {
       });
 
       aggregateQuery.push({
-        $match:{
-          status:"archived"
-        }
-      })
+        $match: {
+          status: "archived",
+        },
+      });
 
       aggregateQuery.push({
         $project: {
