@@ -18,13 +18,18 @@ import { successResponse } from "src/common/helpers/responses/success.helper";
 import { AuthService } from "src/security/auth/auth.service";
 import { LoginDto } from "src/common/dto/common.dto";
 import { DeveloperListPaginationDto } from "./dto/list-developer.dto";
+import { LoggerService } from "src/common/logger/logger.service";
+import { Tasks, TasksDocument } from "src/task/schemas/task.schema";
 
 @Injectable()
 export class DeveloperService {
   constructor(
     @InjectModel(Developers.name)
     private readonly developerModel: Model<DevelopersDocument>,
-    private readonly authService: AuthService
+    @InjectModel(Tasks.name)
+    private readonly taskModel: Model<TasksDocument>,
+    private readonly authService: AuthService,
+    private readonly loggerService: LoggerService
   ) {}
 
   async registerDeveloper(body: CreateDeveloperDto, res) {
@@ -168,6 +173,146 @@ export class DeveloperService {
       return res.status(statusOk).json(
         successResponse(statusOk, DEVELOPER_MSG.DEVELOPER_LIST_SUCC, {
           ...developerList[0],
+        })
+      );
+    } catch (error) {
+      throw CustomError.UnknownError(error?.message, error?.status);
+    }
+  }
+
+  async createInitialDeveloper() {
+    try {
+      const findDeveloperEmail = await this.developerModel.find({
+        $or: [{ email: "john@yopmail.com" }, { email: "michel@yopmail.com" }],
+      });
+
+      if (findDeveloperEmail?.length) {
+        return false;
+      }
+
+      const insertObjs = [
+        {
+          name: "John Doe",
+          email: "john@yopmail.com",
+          phoneNumber: "8956237412",
+          countryCode: "+91",
+          password: await bcrypt.hash("John@123", 10),
+        },
+        {
+          name: "Michel Jackson",
+          email: "michel@yopmail.com",
+          phoneNumber: "7894561237",
+          countryCode: "+91",
+          password: await bcrypt.hash("Michel@123", 10),
+        },
+        {
+          name: "UnAssign",
+          email: "unassign@yopmail.com",
+          phoneNumber: "4561237895",
+          countryCode: "+91",
+          password: await bcrypt.hash("Unassign@123", 10),
+        },
+      ];
+
+      await this.developerModel.insertMany(insertObjs);
+
+      this.loggerService.log("Initial user loaded successfully.");
+    } catch (error) {
+      throw CustomError.UnknownError(error?.message, error?.status);
+    }
+  }
+
+  async developerCountWiseList(body: DeveloperListPaginationDto, res) {
+    try {
+      const limit = body.limit ? Number(body.limit) : 10;
+      const page = body.page ? Number(body.page) : 1;
+      const skip = (page - 1) * limit;
+
+      const aggregateQuery = [];
+
+      aggregateQuery.push({
+        $match: {
+          status: {
+            $in: ["todo", "inProgress"],
+          },
+        },
+      });
+
+      aggregateQuery.push({
+        $addFields: {
+          consideredDeveloper: {
+            $cond: {
+              if: {
+                $eq: ["$developerId", "$assignedTo"],
+              },
+              then: "$developerId",
+              else: "$assignedTo",
+            },
+          },
+        },
+      });
+
+      aggregateQuery.push({
+        $lookup: {
+          from: "table_developer",
+          localField: "consideredDeveloper",
+          foreignField: "_id",
+          as: "developer",
+        },
+      });
+
+      aggregateQuery.push({
+        $unwind: {
+          path: "$developer",
+          preserveNullAndEmptyArrays: true,
+        },
+      });
+
+      aggregateQuery.push({
+        $group: {
+          _id: "$developer.name",
+          todoCount: {
+            $sum: { $cond: [{ $eq: ["$status", "todo"] }, 1, 0] },
+          },
+          inProgressCount: {
+            $sum: { $cond: [{ $eq: ["$status", "inProgress"] }, 1, 0] },
+          },
+        },
+      });
+
+      aggregateQuery.push({
+        $project: {
+          _id: 0,
+          developerName: "$_id",
+          todoCount: 1,
+          inProgressCount: 1,
+        },
+      });
+
+      aggregateQuery.push({
+        $sort: {
+          developerName: 1,
+        },
+      });
+
+      aggregateQuery.push({
+        $facet: {
+          developerCountRes: [{ $skip: skip }, { $limit: limit }],
+          total_records: [{ $count: "count" }],
+        },
+      });
+      const developerCountList = await this.taskModel.aggregate(aggregateQuery);
+
+      if (developerCountList) {
+        developerCountList[0].total_records =
+          developerCountList[0].total_records.length > 0
+            ? developerCountList[0].total_records[0].count
+            : 0;
+      }
+
+      return res.status(statusOk).json(
+        successResponse(statusOk, DEVELOPER_MSG.DEVELOPER_COUNT_LIST_SUCC, {
+          ...developerCountList[0],
         })
       );
     } catch (error) {

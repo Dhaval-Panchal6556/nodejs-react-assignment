@@ -28,6 +28,7 @@ export const DEVELOPER_MSG = {
   DEVELOPER_LOGIN_SUCC: "Developer login successfully.",
   DEVELOPER_NOT_FOUND: "Developer not found.",
   DEVELOPER_LIST_SUCC: "Developer list fetch successfully.",
+  DEVELOPER_COUNT_LIST_SUCC: "Developer count list fetch successfully.",
 };
 
 export const TASK_MSG = {

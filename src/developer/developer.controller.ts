@@ -33,4 +33,12 @@ export class DeveloperController {
   ) {
     return this.developerService.developerList(body, res, req);
   }
+
+  @Post("countList")
+  developerCountWiseList(
+    @Body() body: DeveloperListPaginationDto,
+    @Res() res: Response,
+  ) {
+    return this.developerService.developerCountWiseList(body, res);
+  }
 }

@@ -9,7 +9,7 @@ export class Developers {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true })
   email: string;
 
   @Prop({ required: true })
