@@ -157,11 +157,13 @@ export class TaskService {
                   assignedName: "$assignedDetails.name",
                   assignedId: "$assignedDetails._id",
                   createdDate: "$createdDate",
+                  expiredDate:"$expiredDate"
                 },
                 null,
               ],
             },
           },
+          
         },
       });
 
@@ -250,6 +252,18 @@ export class TaskService {
         }
       );
 
+      if(body.status == "expired"){
+        await this.taskModel.findOneAndUpdate(
+          { _id: new mongoose.Types.ObjectId(body._id) },
+          {
+            status: body.status,
+            expiredDate: new Date().toISOString(),
+          }
+        );
+      }
+      
+      
+
       return res
         .status(statusOk)
         .json(successResponse(statusOk, TASK_MSG.TASK_UPDATED_SUCC, {}));
@@ -303,6 +317,72 @@ export class TaskService {
       return res
         .status(statusOk)
         .json(successResponse(statusOk, TASK_MSG.TASK_DELETE_SUCC, {}));
+    } catch (error) {
+      throw CustomError.UnknownError(error?.message, error?.status);
+    }
+  }
+
+  async archivedList(body: TaskListPaginationDto, res, req) {
+    try {
+      const limit = body.limit ? Number(body.limit) : 10;
+      const page = body.page ? Number(body.page) : 1;
+      const skip = (page - 1) * limit;
+
+      console.log("req.user._id: ", req.user._id);
+      const aggregateQuery = [];
+
+      aggregateQuery.push({
+        $match: {
+          $expr: {
+            $or: [
+              {
+                $eq: [
+                  "$developerId",
+                  new mongoose.Types.ObjectId(req.user._id),
+                ],
+              },
+              {
+                $eq: ["$assignedTo", new mongoose.Types.ObjectId(req.user._id)],
+              },
+            ],
+          },
+        },
+      });
+
+      aggregateQuery.push({
+        $match:{
+          status:"archived"
+        }
+      })
+
+      aggregateQuery.push({
+        $project: {
+          title: 1,
+          status: 1,
+        },
+      });
+
+      aggregateQuery.push({
+        $facet: {
+          archivedList: [{ $skip: skip }, { $limit: limit }],
+          total_records: [{ $count: "count" }],
+        },
+      });
+
+      const archivedList = await this.taskModel.aggregate(aggregateQuery);
+
+      if (archivedList) {
+        archivedList[0].total_records =
+          archivedList[0].total_records.length > 0
+            ? archivedList[0].total_records[0].count
+            : 0;
+      }
+
+      return res.status(statusOk).json(
+        successResponse(statusOk, TASK_MSG.ARCHIVED_TASK_SUCC, {
+          ...archivedList[0],
+        })
+      );
     } catch (error) {
       throw CustomError.UnknownError(error?.message, error?.status);
     }

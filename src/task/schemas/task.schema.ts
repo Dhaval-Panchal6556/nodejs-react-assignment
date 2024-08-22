@@ -27,6 +27,9 @@ export class Tasks {
 
   @Prop()
   inProgressDate: Date;
+
+  @Prop()
+  expiredDate: Date;
 }
 
 export const TasksSchema = SchemaFactory.createForClass(Tasks);

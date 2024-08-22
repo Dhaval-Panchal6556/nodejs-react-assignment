@@ -36,5 +36,5 @@ export const TASK_MSG = {
   TASK_LIST_SUCC: "Task list fetch successfully.",
   TASK_UPDATE_DETAILS_SUCC: "Task details updated successfully.",
   TASK_DELETE_SUCC: "Task deleted successfully.",
-
+  ARCHIVED_TASK_SUCC: "Archived task fetch successfully.",
 };

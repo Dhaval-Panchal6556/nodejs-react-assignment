@@ -19,13 +19,26 @@ export class TaskController {
   }
 
   @Post("list")
-  listTask(@Body() taskListDto: TaskListPaginationDto, @Res() res: Response, @Req() req : Request) {
+  listTask(
+    @Body() taskListDto: TaskListPaginationDto,
+    @Res() res: Response,
+    @Req() req: Request
+  ) {
     return this.taskService.listTask(taskListDto, res, req);
   }
 
   @Post("update")
   updateTask(@Body() updateTaskDto: UpdateTaskDto, @Res() res: Response) {
     return this.taskService.updateTask(updateTaskDto, res);
+  }
+
+  @Post("archivedList")
+  archivedList(
+    @Body() archivedTaskDto: TaskListPaginationDto,
+    @Res() res: Response,
+    @Req() req: Request
+  ) {
+    return this.taskService.archivedList(archivedTaskDto, res, req);
   }
 
   @Post("updateTaskDetails")
